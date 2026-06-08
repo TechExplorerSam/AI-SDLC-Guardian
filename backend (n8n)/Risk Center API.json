@@ -1,0 +1,127 @@
+{
+  "name": "Risk Center API",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "risk-center",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "5da5e283-7db7-45ba-848f-58e1e6d5a26f",
+      "name": "Webhook",
+      "webhookId": "7c639741-a0cf-4349-8c42-a0e86e3cbfeb",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "bk108bqD9L0ByTnd",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "collection": "release_history",
+        "options": {
+          "limit": 100,
+          "sort": "{\n  \"timestamp\": -1\n}"
+        }
+      },
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1.3,
+      "position": [
+        208,
+        0
+      ],
+      "id": "29cc90ed-5603-4d9c-b640-3d606296fed9",
+      "name": "Find documents",
+      "credentials": {
+        "mongoDb": {
+          "id": "cUxIk9YqWdCKB3jN",
+          "name": "MongoDB account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nfor (const item of $input.all()) {\n  item.json.myNewField = 1;const releases = $input.all().map(item => item.json);\nconst total = releases.length;\n\nconst countBy = (key, value) =>\n  releases.filter(r => String(r[key]).toUpperCase() === value).length;\n\nconst allBlockers = releases.flatMap(r => r.criticalBlockers || []);\nconst allActions = releases.flatMap(r => r.requiredActions || []);\n\nfunction frequency(arr) {\n  const map = {};\n\n  for (const item of arr) {\n    if (!item) continue;\n    map[item] = (map[item] || 0) + 1;\n  }\n\n  return Object.entries(map)\n    .sort((a, b) => b[1] - a[1])\n    .map(([name, count]) => ({ name, count }));\n}\n\nfunction riskLevelFromScore(score) {\n  const value = Number(score || 0);\n\n  if (value >= 80) return \"LOW\";\n  if (value >= 60) return \"MEDIUM\";\n  return \"HIGH\";\n}\n\nconst domainRiskBreakdown = {\n  security: {\n    averageScore: 0,\n    riskLevel: \"UNKNOWN\"\n  },\n  performance: {\n    averageScore: 0,\n    riskLevel: \"UNKNOWN\"\n  },\n  business: {\n    averageScore: 0,\n    riskLevel: \"UNKNOWN\"\n  },\n  observability: {\n    averageScore: 0,\n    riskLevel: \"UNKNOWN\"\n  },\n  reliability: {\n    averageScore: 0,\n    riskLevel: \"UNKNOWN\"\n  },\n  compliance: {\n    averageScore: 0,\n    riskLevel: \"UNKNOWN\"\n  }\n};\n\nfunction avg(key) {\n  if (total === 0) return 0;\n\n  return Math.round(\n    releases.reduce((sum, r) => sum + Number(r[key] || 0), 0) / total\n  );\n}\n\nfor (const domain of Object.keys(domainRiskBreakdown)) {\n  const scoreKey = `${domain}Score`;\n  const averageScore = avg(scoreKey);\n\n  domainRiskBreakdown[domain] = {\n    averageScore,\n    riskLevel: riskLevelFromScore(averageScore)\n  };\n}\n\nconst recentHighRiskReleases = releases\n  .filter(r => String(r.riskLevel).toUpperCase() === \"HIGH\")\n  .slice(0, 10)\n  .map(r => ({\n    releaseId: r.releaseId,\n    timestamp: r.timestamp,\n    releaseConfidenceScore: r.releaseConfidenceScore,\n    overallRiskScore: r.overallRiskScore,\n    riskLevel: r.riskLevel,\n    releaseRecommendation: r.releaseRecommendation,\n    criticalBlockers: r.criticalBlockers || []\n  }));\n\nconst criticalRiskItems = releases.flatMap(r =>\n  (r.criticalBlockers || []).map(blocker => ({\n    releaseId: r.releaseId,\n    timestamp: r.timestamp,\n    riskLevel: r.riskLevel,\n    blocker,\n    recommendation: r.releaseRecommendation\n  }))\n);\n\nreturn {\n  generatedAt: new Date().toISOString(),\n\n  summary: {\n    totalReleases: total,\n    totalRisks: allBlockers.length,\n    highRiskReleases: countBy(\"riskLevel\", \"HIGH\"),\n    mediumRiskReleases: countBy(\"riskLevel\", \"MEDIUM\"),\n    lowRiskReleases: countBy(\"riskLevel\", \"LOW\"),\n    noGoReleases: countBy(\"releaseRecommendation\", \"NO_GO\"),\n    goWithRiskReleases: countBy(\"releaseRecommendation\", \"GO_WITH_RISK\"),\n    goReleases: countBy(\"releaseRecommendation\", \"GO\")\n  },\n\n  domainRiskBreakdown,\n\n  topBlockers: frequency(allBlockers).slice(0, 10),\n\n  topRequiredActions: frequency(allActions).slice(0, 10),\n\n  recentHighRiskReleases,\n\n  criticalRiskItems,\n\n  riskHeatmap: Object.entries(domainRiskBreakdown).map(([domain, data]) => ({\n    domain,\n    averageScore: data.averageScore,\n    riskLevel: data.riskLevel\n  }))\n};\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "14c67334-2c79-4f3c-8156-dc5c55101fe2",
+      "name": "Build Risk Center"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        624,
+        0
+      ],
+      "id": "1cb1785b-200f-4b0f-baf3-2ee347beaf73",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Find documents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find documents": {
+      "main": [
+        [
+          {
+            "node": "Build Risk Center",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Risk Center": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "25c23f31-521a-4863-9859-87450276a478",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0be5121106b8169345c4aac5834078a57298f091fee8c2fc99e2f6d229715cb4"
+  },
+  "id": "F42lf4hOWUR34Dnt",
+  "tags": []
+}

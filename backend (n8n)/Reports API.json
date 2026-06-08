@@ -1,0 +1,127 @@
+{
+  "name": "Reports API",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "reports",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "a7ff6a84-9342-4376-b7b4-9702398add58",
+      "name": "Webhook",
+      "webhookId": "8ff1ba45-209d-4e9f-a7b1-f171b0c2cc61",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "bk108bqD9L0ByTnd",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "collection": "release_history",
+        "options": {
+          "limit": 100,
+          "sort": "{\n  \"timestamp\": -1\n}"
+        }
+      },
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1.3,
+      "position": [
+        208,
+        0
+      ],
+      "id": "45d113a1-3e92-40dd-bdef-2026f6643b3b",
+      "name": "Find documents",
+      "credentials": {
+        "mongoDb": {
+          "id": "cUxIk9YqWdCKB3jN",
+          "name": "MongoDB account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const releases = $input.all().map(item => item.json);\nconst total = releases.length;\n\nconst avg = key => {\n  if (total === 0) return 0;\n  return Math.round(\n    releases.reduce((sum, r) => sum + Number(r[key] || 0), 0) / total\n  );\n};\n\nconst countBy = (key, value) =>\n  releases.filter(r => r[key] === value).length;\n\nconst allBlockers = releases.flatMap(r => r.criticalBlockers || []);\nconst allActions = releases.flatMap(r => r.requiredActions || []);\n\nconst frequency = arr => {\n  const map = {};\n  for (const item of arr) {\n    if (!item) continue;\n    map[item] = (map[item] || 0) + 1;\n  }\n  return Object.entries(map)\n    .sort((a, b) => b[1] - a[1])\n    .map(([name, count]) => ({ name, count }));\n};\n\nconst latestRelease = releases[0] || null;\n\nconst domainAverages = {\n  security: avg(\"securityScore\"),\n  performance: avg(\"performanceScore\"),\n  business: avg(\"businessScore\"),\n  observability: avg(\"observabilityScore\"),\n  reliability: avg(\"reliabilityScore\"),\n  compliance: avg(\"complianceScore\")\n};\n\nconst weakestDomain =\n  Object.entries(domainAverages)\n    .sort((a, b) => a[1] - b[1])[0]?.[0] || \"UNKNOWN\";\n\nconst strongestDomain =\n  Object.entries(domainAverages)\n    .sort((a, b) => b[1] - a[1])[0]?.[0] || \"UNKNOWN\";\n\nreturn {\n  generatedAt: new Date().toISOString(),\n\n  summary: {\n    totalReleases: total,\n    averageConfidence: avg(\"releaseConfidenceScore\"),\n    averageRiskScore: avg(\"overallRiskScore\"),\n    goCount: countBy(\"releaseRecommendation\", \"GO\"),\n    goWithRiskCount: countBy(\"releaseRecommendation\", \"GO_WITH_RISK\"),\n    noGoCount: countBy(\"releaseRecommendation\", \"NO_GO\"),\n    highRiskCount: countBy(\"riskLevel\", \"HIGH\"),\n    mediumRiskCount: countBy(\"riskLevel\", \"MEDIUM\"),\n    lowRiskCount: countBy(\"riskLevel\", \"LOW\"),\n    weakestDomain,\n    strongestDomain\n  },\n\n  domainScores: domainAverages,\n\n  latestRelease,\n\n  topBlockers: frequency(allBlockers).slice(0, 5),\n\n  topRequiredActions: frequency(allActions).slice(0, 5),\n\n  executiveReport: {\n    title: \"Executive Release Readiness Report\",\n    status:\n      total === 0\n        ? \"NO_DATA\"\n        : avg(\"releaseConfidenceScore\") >= 85\n        ? \"HEALTHY\"\n        : avg(\"releaseConfidenceScore\") >= 60\n        ? \"NEEDS_ATTENTION\"\n        : \"CRITICAL\",\n    summary:\n      total === 0\n        ? \"No release data available yet.\"\n        : `Across ${total} release analyses, the average release confidence is ${avg(\n            \"releaseConfidenceScore\"\n          )}%. The weakest domain is ${weakestDomain}.`,\n    recommendation:\n      total === 0\n        ? \"Run release analyses to generate reports.\"\n        : countBy(\"releaseRecommendation\", \"NO_GO\") > 0\n        ? \"Prioritize fixing blockers from NO_GO releases before production deployment.\"\n        : \"Continue monitoring release quality and domain risk trends.\"\n  },\n\n  reports: {\n    securityReport: {\n      averageSecurityScore: avg(\"securityScore\"),\n      highRiskSecurityItems: releases.filter(\n        r => r.securityRiskLevel === \"HIGH\"\n      ).length\n    },\n    performanceReport: {\n      averagePerformanceScore: avg(\"performanceScore\"),\n      highRiskPerformanceItems: releases.filter(\n        r => r.performanceRiskLevel === \"HIGH\"\n      ).length\n    },\n    complianceReport: {\n      averageComplianceScore: avg(\"complianceScore\"),\n      highRiskComplianceItems: releases.filter(\n        r => r.complianceRiskLevel === \"HIGH\"\n      ).length\n    },\n    qaReport: {\n      averageQAReadiness: Math.round(\n        releases.reduce(\n          (sum, r) => sum + Number(r.releaseMetrics?.qaReadiness || 0),\n          0\n        ) / (total || 1)\n      ),\n      noTestingBlockers: allBlockers.filter(b =>\n        String(b).toLowerCase().includes(\"testing\")\n      ).length\n    }\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "bc109b88-902c-48ba-aa12-e4a17b9ae868",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{$json}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        624,
+        0
+      ],
+      "id": "a38d585b-3e6c-4845-815f-50a420be24da",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Find documents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find documents": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "3657802b-565c-467a-b926-46c4085d7f0a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0be5121106b8169345c4aac5834078a57298f091fee8c2fc99e2f6d229715cb4"
+  },
+  "id": "l4ZoAFdgh2rwkYjR",
+  "tags": []
+}

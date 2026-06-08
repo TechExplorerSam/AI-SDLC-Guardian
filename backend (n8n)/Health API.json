@@ -1,0 +1,93 @@
+{
+  "name": "Health API",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "health",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "7ffd84bf-1778-4472-9fa3-d50fd45cfe40",
+      "name": "Webhook",
+      "webhookId": "52bb468a-0826-42ad-9257-37fd4ce99341",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "bk108bqD9L0ByTnd",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return {\n  status: \"UP\",\n  service: \"AI SDLC Guardian\",\n  database: \"CONNECTED\",\n  timestamp: new Date().toISOString(),\n  version: \"1.0.0\"\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        -64
+      ],
+      "id": "7f6366ba-10e3-4ab8-aaa1-2b1bba4c6a7b",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        416,
+        0
+      ],
+      "id": "7015c964-30d1-4296-9cd3-0d73568813cf",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "0162e50e-7de6-47f8-ad81-7f7480a9e83f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0be5121106b8169345c4aac5834078a57298f091fee8c2fc99e2f6d229715cb4"
+  },
+  "id": "ZKsmSNIQdxe9bgTa",
+  "tags": []
+}

@@ -1,0 +1,1143 @@
+{
+  "name": "AI SDLC Guardian - Master Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "analyze-project",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "e86a2dbe-6e7e-4d89-8a56-37c24bc6c259",
+      "name": "Webhook",
+      "webhookId": "f48e25c4-84a3-41c9-aad7-65cf132d42a3",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "bk108bqD9L0ByTnd",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "18a2fa56-0d4a-4e73-ba2e-701f3409d19b",
+              "name": "requirement",
+              "value": "Users can login using OTP.  OTP expires after 5 minutes.  Maximum 3 OTP requests allowed.",
+              "type": "string"
+            },
+            {
+              "id": "d875b641-b6d2-4916-9607-52ed66b221ec",
+              "name": "changeSummary",
+              "value": "Created OTP generation API.  Created OTP verification API.  Added OTP database table.  Added login screen.  Integrated SMS provider.",
+              "type": "string"
+            },
+            {
+              "id": "ee0d642b-1d02-406f-8f22-4435d85fff83",
+              "name": "testingSummary",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "a5e6adce-01b8-4a9b-aaa0-b18dcc5c6fa6",
+              "name": "developmentSummary",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "86d66385-1ec8-478f-9d6e-bc81e02de5a1",
+              "name": "=projectId",
+              "value": "=={{ `sdcl-${$execution.id}` }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "dotNotation": false
+        }
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ],
+      "id": "2fd3ed87-bc7f-4b4c-b776-ac4829f1cfc3",
+      "name": "Normalize Input"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Requirement:\n{{ $json.requirement }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "instructions": "=You are a Senior Software Architect.\n\nAnalyze requirement.\n\nReturn ONLY JSON:\n\n{\n  \"requirementHealthScore\": 0,\n  \"missingRequirements\": [],\n  \"securityRisks\": [],\n  \"architecturalRisks\": [],\n  \"summary\": \"\"\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        608,
+        320
+      ],
+      "id": "868fa065-b625-4191-a7ae-261d627d360a",
+      "name": "AI Requirement Intelligence",
+      "retryOnFail": true,
+      "credentials": {
+        "openAiApi": {
+          "id": "Kcz0LOwaSlOUmHmX",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Requirement:\n{{ $json.requirement }}\n\nChange Summary:\n{{ $json.changeSummary }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "instructions": "You are a Principal Software Engineer.\n\nAnalyze implementation gaps and risks.\n\nReturn ONLY JSON:\n\n{\n  \"developmentScore\": 0,\n  \"missingImplementations\": [],\n  \"technicalRisks\": [],\n  \"futureDefectRisks\": [],\n  \"summary\": \"\"\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        672,
+        -240
+      ],
+      "id": "30ecd518-1a45-43a6-9b5c-efc04a085a93",
+      "name": "AI Development Intelligence",
+      "retryOnFail": true,
+      "credentials": {
+        "openAiApi": {
+          "id": "Kcz0LOwaSlOUmHmX",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Requirement:\n{{ $json.requirement }}\n\nTesting Summary:\n{{ $json.testingSummary }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "instructions": "You are a QA Architect.\n\nAnalyze test coverage.\n\nReturn ONLY JSON:\n\n{\n  \"testCoverageScore\": 0,\n  \"missingTestScenarios\": [],\n  \"coverageGaps\": [],\n  \"highRiskAreas\": [],\n  \"testingRisks\": [],\n  \"recommendations\": []\n} \n\nIf testingSummary indicates no testing was performed:\n- testCoverageScore must be 0\n- testingRisks must include production defect risk\n- recommendations must include creating full regression, security, edge case, and integration tests"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        688,
+        32
+      ],
+      "id": "5725215a-8da8-4278-b830-fa99c35813cd",
+      "name": "AI QA Intelligence",
+      "retryOnFail": true,
+      "credentials": {
+        "openAiApi": {
+          "id": "Kcz0LOwaSlOUmHmX",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "numberInputs": 9,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1472,
+        -48
+      ],
+      "id": "76308aa6-2d0b-49e2-890c-0833fdbc01a9",
+      "name": "Merge",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Requirement Analysis:\n{{$json.requirementAI}}\n\nDevelopment Analysis:\n{{$json.devAI}}\n\nQA Analysis:\n{{$json.qaAI}}\n\nSecurity Analysis:\n{{$json.securityAI}}\n\nPerformance Analysis:\n{{$json.performanceAI}}\n\nBusiness Impact Analysis:\n{{$json.businessAI}}\n\nObservability Analysis:\n{{$json.observabilityAI}}\n\nReliability Analysis:\n{{$json.reliabilityAI}}\n\nCompliance Analysis:\n{{$json.complianceAI}}\n\nEvaluate overall release readiness and return JSON according to the system schema.\n"
+            }
+          ]
+        },
+        "builtInTools": {
+          "webSearch": {
+            "searchContextSize": "medium"
+          }
+        },
+        "options": {
+          "instructions": "=You are an Enterprise CTO, Chief Architect, CISO, Reliability Engineer, Compliance Officer, and Release Manager.\n\nYour responsibility is to make the final production release decision based on the outputs of specialized review systems.\n\nYou do NOT perform detailed security, performance, observability, reliability, business, or compliance scoring. Specialist agents already perform those evaluations.\n\nYour job is to:\n\n1. Assess overall release readiness.\n2. Identify critical blockers.\n3. Consolidate risks across all review domains.\n4. Calculate an overall release confidence score.\n5. Determine the release recommendation.\n6. Produce an executive-level release summary.\n\nYou must be strict, realistic, and production-focused.\n\nNever inflate scores.\n\nSecurity issues, testing gaps, compliance concerns, reliability risks, and missing requirements must significantly reduce release confidence.\n\nFocus on release readiness rather than individual domain scoring.\n\nEvaluate:\n\n* Requirement completeness\n* Development readiness\n* QA coverage\n* Security findings\n* Performance concerns\n* Business impact risks\n* Observability gaps\n* Reliability concerns\n* Compliance risks\n* Data privacy concerns\n* Audit gaps\n* Operational readiness\n\nRelease Recommendation Rules:\n\nGO\n\n* Confidence >= 85\n* No critical blockers\n* Acceptable testing coverage\n* No significant security or compliance risks\n\nGO_WITH_RISK\n\n* Confidence between 60 and 84\n* Non-critical risks exist\n* Risks are manageable and documented\n\nNO_GO\n\n* Confidence < 60\n* Critical blockers exist\n* Significant testing gaps exist\n* Major security, compliance, reliability, or operational risks exist\n\nReturn ONLY valid JSON.\n\nNever return markdown.\n\nNever return explanations outside JSON.\n\nOutput Schema:\n\n{\n\"releaseConfidenceScore\": 0,\n\"riskLevel\": \"LOW\",\n\"releaseRecommendation\": \"GO\",\n\"criticalBlockers\": [],\n\"requiredActionsBeforeRelease\": [],\n\"executiveSummary\": \"\",\n\"releaseMetrics\": {\n\"requirementsReadiness\": 0,\n\"developmentReadiness\": 0,\n\"qaReadiness\": 0,\n\"securityReadiness\": 0,\n\"performanceReadiness\": 0,\n\"businessReadiness\": 0,\n\"observabilityReadiness\": 0,\n\"reliabilityReadiness\": 0,\n\"complianceReadiness\": 0\n}\n}\n\nriskLevel must be exactly:\nLOW\nMEDIUM\nHIGH\n\nreleaseRecommendation must be exactly:\nGO\nGO_WITH_RISK\nNO_GO\n\nAll readiness values must be integers between 0 and 100.\n\nDo not generate domain scores such as:\nsecurityScore\nperformanceScore\nbusinessScore\nobservabilityScore\nreliabilityScore\ncomplianceScore\n\nDo not generate domain risk levels such as:\nsecurityRiskLevel\nperformanceRiskLevel\nbusinessRiskLevel\nobservabilityRiskLevel\nreliabilityRiskLevel\ncomplianceRiskLevel\n\nThose values are produced by specialist agents and will be handled elsewhere in the workflow.\nIf Testing Summary says no testing performed, no tests created, not tested, testing pending, or empty:\n- qaReadiness must be between 0 and 20\n- releaseRecommendation must be NO_GO\n- riskLevel must be HIGH\n- Add \"No testing performed\" as a critical blocker\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        2144,
+        -416
+      ],
+      "id": "6879644c-ee44-4faf-ae9a-b3ab7e7c818d",
+      "name": "Release Intelligence Engine",
+      "credentials": {
+        "openAiApi": {
+          "id": "Kcz0LOwaSlOUmHmX",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d3e08969-db2d-4472-92a1-89a6b304815d",
+              "name": "devAI",
+              "value": "={{ $json.output[0].content[0].text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1024,
+        -240
+      ],
+      "id": "d0b78fbf-9533-49a3-ae44-d440eb8699e8",
+      "name": "Development Formatter"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "739eef31-2d9a-4608-8bf7-a158c98ead53",
+              "name": "qaAI",
+              "value": "={{ $json.output[0].content[0].text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1040,
+        32
+      ],
+      "id": "7cca7503-dab9-46dd-bf2e-649522f46834",
+      "name": "QA Formatter"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2d717080-7162-401e-ab15-97c205f2c953",
+              "name": "requirementAI",
+              "value": "={{ $json.output[0].content[0].text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        960,
+        320
+      ],
+      "id": "cec5ba36-6b8e-4989-a3aa-7a2aeb6d0d38",
+      "name": "Requirement Formatter"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        4736,
+        160
+      ],
+      "id": "ae90ec46-8669-4dec-8480-881d10f3fcf5",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Requirement:\n{{ $json.requirement }}\n\nDevelopment Summary:\n{{ $json.changeSummary }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "instructions": "You are a Senior Application Security Architect.\n\nAnalyze the requirement and implementation summary.\n\nIdentify:\n\n1. OWASP Top 10 risks\n2. Authentication risks\n3. Authorization risks\n4. Data exposure risks\n5. API security risks\n6. Session management risks\n7. Compliance risks\n8. Security testing recommendations\n\nReturn ONLY JSON:\n\n{\n  \"securityScore\": 0,\n  \"riskLevel\": \"\",\n  \"criticalVulnerabilities\": [],\n  \"authenticationRisks\": [],\n  \"authorizationRisks\": [],\n  \"apiSecurityRisks\": [],\n  \"dataProtectionRisks\": [],\n  \"complianceRisks\": [],\n  \"securityRecommendations\": [],\n  \"executiveSummary\": \"\"\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        688,
+        -448
+      ],
+      "id": "56cc1ed8-8659-403c-bddb-63fe264565fd",
+      "name": "AI Security Intelligence Engine",
+      "retryOnFail": true,
+      "credentials": {
+        "openAiApi": {
+          "id": "Kcz0LOwaSlOUmHmX",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7755df86-56a7-489e-b7e1-ac27a965003a",
+              "name": "=securityAI",
+              "value": "={{ $json.output[0].content[0].text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1040,
+        -448
+      ],
+      "id": "3d8d8b18-6bc2-45ac-aa84-f6d9414b26fd",
+      "name": "Security Intelligence Formatter"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Requirement:\n{{ $json.requirement }}\n\nDevelopment Summary:\n{{ $json.changeSummary }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "instructions": "You are a Principal Performance Engineer.\n\nAnalyze the requirement and implementation summary.\n\nIdentify scalability issues, bottlenecks, latency risks, database risks, caching opportunities, and infrastructure concerns.\n\nReturn ONLY JSON.\n\n{\n  \"performanceScore\": 0,\n  \"performanceRisks\": [],\n  \"databaseRisks\": [],\n  \"scalabilityRisks\": [],\n  \"cachingRecommendations\": [],\n  \"loadTestRecommendations\": [],\n  \"summary\": \"\"\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        576,
+        528
+      ],
+      "id": "70e54517-9ffb-4806-a84c-b9632e117737",
+      "name": "Performance Intelligence Agent",
+      "retryOnFail": true,
+      "credentials": {
+        "openAiApi": {
+          "id": "Kcz0LOwaSlOUmHmX",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4cc58da8-880f-41b7-a259-c12e78e12c7e",
+              "name": "performanceAI",
+              "value": "={{ $json.output[0].content[0].text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        960,
+        528
+      ],
+      "id": "67b3141f-c6d0-4eb7-bdd5-792b641033eb",
+      "name": "Performace Formatter"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "function normalizeRiskLevel(value, score) {\n  if (value) {\n    const v = String(value).toUpperCase();\n\n    if (v.includes(\"LOW\")) return \"LOW\";\n    if (v.includes(\"MEDIUM\") || v.includes(\"MODERATE\")) return \"MEDIUM\";\n    if (v.includes(\"HIGH\")) return \"HIGH\";\n  }\n\n  const numericScore = Number(score || 0);\n\n  if (numericScore >= 80) return \"LOW\";\n  if (numericScore >= 60) return \"MEDIUM\";\n  return \"HIGH\";\n}\n\nfunction score(value) {\n  return Number(value || 0);\n}\n\nfunction uniqueArray(arr) {\n  return [...new Set(arr.filter(Boolean))];\n}\n\nconst release = $json.releaseData || {};\n\nconst securityAI = $json.securityAI || {};\nconst performanceAI = $json.performanceAI || {};\nconst businessAI = $json.businessAI || {};\nconst observabilityAI = $json.observabilityAI || {};\nconst reliabilityAI = $json.reliabilityAI || {};\nconst complianceAI = $json.complianceAI || {};\n\nconst releaseMetrics = release.releaseMetrics || {};\n\nlet blockers = uniqueArray(release.criticalBlockers || []);\nlet actions = uniqueArray(release.requiredActionsBeforeRelease || []);\n\nconst securityScore = score(securityAI.securityScore);\nconst performanceScore = score(performanceAI.performanceScore);\nconst businessScore = score(businessAI.businessScore);\nconst observabilityScore = score(observabilityAI.observabilityScore);\nconst reliabilityScore = score(reliabilityAI.reliabilityScore);\nconst complianceScore = score(complianceAI.complianceScore);\n\nconst qaReadiness = score(releaseMetrics.qaReadiness);\n\nlet finalConfidence = score(release.releaseConfidenceScore);\nlet finalRiskLevel = release.riskLevel || \"UNKNOWN\";\nlet finalRecommendation = release.releaseRecommendation || \"UNKNOWN\";\n\nif (qaReadiness <= 20) {\n  finalConfidence =\n    finalConfidence === 0\n      ? 35\n      : Math.min(finalConfidence, 50);\n\n  finalRiskLevel = \"HIGH\";\n  finalRecommendation = \"NO_GO\";\n\n  blockers = uniqueArray([\n  ...blockers.filter(\n    b => !String(b).toLowerCase().includes(\"no testing performed\")\n  ),\n  \"No testing performed or QA coverage is critically insufficient.\"\n]);\n\n  actions = uniqueArray([\n    ...actions,\n    \"Create and execute full QA coverage including functional, negative, edge-case, security, integration, and regression tests.\"\n  ]);\n}\n\nreturn {\n  overallRiskScore: 100 - finalConfidence,\n\n  releaseConfidenceScore: finalConfidence,\n\n  riskLevel: normalizeRiskLevel(finalRiskLevel, finalConfidence),\n\n  releaseRecommendation: finalRecommendation,\n\n  securityScore,\n  performanceScore,\n  businessScore,\n  observabilityScore,\n  reliabilityScore,\n  complianceScore,\n\n  securityRiskLevel: normalizeRiskLevel(\n    securityAI.securityRiskLevel || securityAI.riskLevel,\n    securityScore\n  ),\n\n  performanceRiskLevel: normalizeRiskLevel(\n    performanceAI.performanceRiskLevel,\n    performanceScore\n  ),\n\n  businessRiskLevel: normalizeRiskLevel(\n    businessAI.businessRiskLevel,\n    businessScore\n  ),\n\n  observabilityRiskLevel: normalizeRiskLevel(\n    observabilityAI.observabilityRiskLevel,\n    observabilityScore\n  ),\n\n  reliabilityRiskLevel: normalizeRiskLevel(\n    reliabilityAI.reliabilityRiskLevel,\n    reliabilityScore\n  ),\n\n  complianceRiskLevel: normalizeRiskLevel(\n    complianceAI.complianceRiskLevel,\n    complianceScore\n  ),\n\n  releaseMetrics,\n\n  totalBlockers: blockers.length,\n\n  totalActions: actions.length,\n\n  criticalBlockers: blockers,\n\n  requiredActions: actions,\n\n  executiveSummary:\n    qaReadiness <= 20\n      ? `${release.executiveSummary || \"\"} QA coverage is critically insufficient, so the release is blocked until proper testing is completed.`.trim()\n      : release.executiveSummary || \"\"\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3344,
+        -112
+      ],
+      "id": "9ecfb888-095f-4cb3-9786-c4e47863883a",
+      "name": "Risk Aggregator"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Requirement:\n{{ $json.requirement }}\n\nChange Summary:\n{{ $json.changeSummary }}\n\nTesting Summary:\n{{ $json.testingSummary }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "instructions": "=You are a Product Director and Business Risk Analyst.\n\nRequirement:\n{{ $json.requirement }}\n\nChange Summary:\n{{ $json.changeSummary }}\n\nTesting Summary:\n{{ $json.testingSummary }}\n\nAnalyze:\n\n- Business value\n- Customer impact\n- Revenue impact\n- Operational impact\n- Compliance impact\n- Reputation risks\n\nReturn ONLY valid JSON.\n\n{\n  \"businessScore\": 0,\n  \"businessRiskLevel\": \"LOW\",\n  \"customerImpact\": [],\n  \"businessRisks\": [],\n  \"complianceConcerns\": [],\n  \"recommendations\": [],\n  \"summary\": \"\"\n}\n\nRules:\n\nbusinessScore = 0-100\n\nbusinessRiskLevel must be:\nLOW\nMEDIUM\nHIGH"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        704,
+        -784
+      ],
+      "id": "2498b299-34fd-4e37-88fd-afdc0d9499b0",
+      "name": "AI Business Impact Intelligence",
+      "retryOnFail": true,
+      "credentials": {
+        "openAiApi": {
+          "id": "Kcz0LOwaSlOUmHmX",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "224c987f-a4a3-4682-8952-85cb55a43a91",
+              "name": "businessAI",
+              "value": "={{ $json.output[0].content[0].text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1056,
+        -784
+      ],
+      "id": "707d11bb-6b8d-4b27-b2c1-2a48ebd720c1",
+      "name": "Business Impact Formatter"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Requirement:\n{{ $json.requirement }}\n\nChange Summary:\n{{ $json.changeSummary }}\n\nTesting Summary:\n{{ $json.testingSummary }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "instructions": "=You are a Site Reliability Engineer (SRE) and Observability Architect.\n\nRequirement:\n{{ $json.requirement }}\n\nChange Summary:\n{{ $json.changeSummary }}\n\nTesting Summary:\n{{ $json.testingSummary }}\n\nAnalyze:\n\n- Logging coverage\n- Monitoring readiness\n- Alerting readiness\n- Audit trail completeness\n- Production visibility\n- Incident investigation capability\n\nReturn ONLY valid JSON.\n\n{\n  \"observabilityScore\": 0,\n  \"observabilityRiskLevel\": \"LOW\",\n  \"loggingGaps\": [],\n  \"monitoringGaps\": [],\n  \"alertingGaps\": [],\n  \"auditTrailGaps\": [],\n  \"recommendations\": [],\n  \"summary\": \"\"\n}\n\nRules:\n\nobservabilityScore = 0-100\n\nobservabilityRiskLevel must be:\nLOW\nMEDIUM\nHIGH"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        608,
+        720
+      ],
+      "id": "816ad265-b466-4a91-ad3b-a6ec37239cf9",
+      "name": "AI Observability Intelligence",
+      "retryOnFail": true,
+      "credentials": {
+        "openAiApi": {
+          "id": "Kcz0LOwaSlOUmHmX",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7b3614db-a3b4-416d-9d89-b5614e2efa99",
+              "name": "observabilityAI",
+              "value": "={{ $json.output[0].content[0].text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        960,
+        720
+      ],
+      "id": "07ab91ba-42fb-4367-9e3a-1ecb3bf268df",
+      "name": "Observability Intelligence Formatter"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Requirement:\n{{ $json.requirement }}\n\nChange Summary:\n{{ $json.changeSummary }}\n\nTesting Summary:\n{{ $json.testingSummary }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "instructions": "=You are a Principal Site Reliability Engineer (SRE).\n\nRequirement:\n{{ $json.requirement }}\n\nChange Summary:\n{{ $json.changeSummary }}\n\nTesting Summary:\n{{ $json.testingSummary }}\n\nAnalyze:\n\n- Availability\n- Fault tolerance\n- Retry mechanisms\n- Disaster recovery readiness\n- Single points of failure\n- Resilience under failures\n- External dependency reliability\n- Recovery capability\n\nReturn ONLY valid JSON.\n\n{\n  \"reliabilityScore\": 0,\n  \"reliabilityRiskLevel\": \"LOW\",\n  \"singlePointsOfFailure\": [],\n  \"availabilityRisks\": [],\n  \"recoveryRisks\": [],\n  \"dependencyRisks\": [],\n  \"recommendations\": [],\n  \"summary\": \"\"\n}\n\nRules:\n\nreliabilityScore = 0-100\n\nreliabilityRiskLevel must be:\nLOW\nMEDIUM\nHIGH"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        592,
+        960
+      ],
+      "id": "80f45877-efc8-444b-9ee4-2633943275b4",
+      "name": "AI Reliability Intelligence",
+      "retryOnFail": true,
+      "credentials": {
+        "openAiApi": {
+          "id": "Kcz0LOwaSlOUmHmX",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e243ef4b-919b-4045-a8df-502aa9f0b59b",
+              "name": "reliabilityAI",
+              "value": "={{ $json.output[0].content[0].text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        944,
+        960
+      ],
+      "id": "85ca8d61-606f-484b-92f7-623a4d6968e8",
+      "name": "Reliability Intelligence Formatter"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Requirement:\n{{ $json.requirement }}\n\nChange Summary:\n{{ $json.changeSummary }}\n\nTesting Summary:\n{{ $json.testingSummary }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "instructions": "=You are a Compliance Officer and Software Governance Expert.\n\nRequirement:\n{{ $json.requirement }}\n\nChange Summary:\n{{ $json.changeSummary }}\n\nTesting Summary:\n{{ $json.testingSummary }}\n\nAnalyze compliance readiness against:\n\n- GDPR\n- PCI-DSS\n- ISO 27001\n- SOC 2\n- Data Privacy\n- Audit Requirements\n- Security Policies\n- Regulatory Risks\n\nReturn ONLY valid JSON.\n\n{\n  \"complianceScore\": 0,\n  \"complianceRiskLevel\": \"LOW\",\n  \"complianceViolations\": [],\n  \"auditGaps\": [],\n  \"dataPrivacyRisks\": [],\n  \"regulatoryConcerns\": [],\n  \"recommendations\": [],\n  \"summary\": \"\"\n}\n\nRules:\n\ncomplianceScore = 0-100\n\ncomplianceRiskLevel must be:\nLOW\nMEDIUM\nHIGH"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        736,
+        -1008
+      ],
+      "id": "6ba60834-a852-4f7b-9387-d8c317c8018a",
+      "name": "AI Compliance Intelligence",
+      "retryOnFail": true,
+      "credentials": {
+        "openAiApi": {
+          "id": "Kcz0LOwaSlOUmHmX",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1b3f35ea-62c1-473f-b118-1068420ed08e",
+              "name": "complianceAI",
+              "value": "={{ $json.output[0].content[0].text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1088,
+        -1008
+      ],
+      "id": "83ede00f-a483-4321-81bb-2bfe924edd7e",
+      "name": "Compliance Intelligence Formatter"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "function cleanJson(data) {\n  if (!data) return {};\n\n  if (typeof data === 'object') {\n    return data;\n  }\n\n  try {\n    const cleaned = String(data)\n      .replace(/```json/g, '')\n      .replace(/```/g, '')\n      .trim();\n\n    return JSON.parse(cleaned);\n  } catch (e) {\n    return {};\n  }\n}\n\nreturn {\n  requirementAI: cleanJson($json.requirementAI),\n  devAI: cleanJson($json.devAI),\n  qaAI: cleanJson($json.qaAI),\n\n  securityAI: cleanJson($json.securityAI),\n  performanceAI: cleanJson($json.performanceAI),\n  businessAI: cleanJson($json.businessAI),\n  observabilityAI: cleanJson($json.observabilityAI),\n  reliabilityAI: cleanJson($json.reliabilityAI),\n  complianceAI: cleanJson($json.complianceAI)\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1792,
+        112
+      ],
+      "id": "c9f75936-9258-4b2d-a505-e8b9a1fd2afc",
+      "name": "Normalize Agent Outputs"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        3072,
+        -80
+      ],
+      "id": "8f62dfd0-e6b4-4366-9751-8a0eac3f6a2a",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const text = $json.output[0].content[0].text;\n\nconst cleaned = text\n  .replace(/```json/g, '')\n  .replace(/```/g, '')\n  .trim();\n\nreturn {\n  releaseData: JSON.parse(cleaned)\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2688,
+        -416
+      ],
+      "id": "99175b65-d2e4-4847-a55e-df7d619eac52",
+      "name": "Release Formatter"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const now = new Date();\n\nreturn {\n  ...$json,\n\n  releaseId: `REL-${now.getFullYear()}-${Date.now()}`,\n  timestamp: now.toISOString(),\n\n  requirement: $('Webhook').first().json.body?.requirement || $('Webhook').first().json.requirement || \"\",\n  changeSummary: $('Webhook').first().json.body?.changeSummary || $('Webhook').first().json.changeSummary || \"\",\n  testingSummary: $('Webhook').first().json.body?.testingSummary || $('Webhook').first().json.testingSummary || \"\"\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3824,
+        -112
+      ],
+      "id": "08c95465-f188-49b7-97dc-96934f378309",
+      "name": "Generate Release ID"
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "collection": "release_history",
+        "fields": "releaseId,timestamp,overallRiskScore,releaseConfidenceScore,riskLevel,releaseRecommendation,securityScore,performanceScore,businessScore,observabilityScore,reliabilityScore,complianceScore,securityRiskLevel,performanceRiskLevel,businessRiskLevel,observabilityRiskLevel,reliabilityRiskLevel,complianceRiskLevel,totalBlockers,totalActions,criticalBlockers,requiredActions,executiveSummary,releaseMetrics",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1.3,
+      "position": [
+        4304,
+        -16
+      ],
+      "id": "0ddbe63d-74f8-4a36-9a4e-caa3d173b8ba",
+      "name": "Insert documents",
+      "credentials": {
+        "mongoDb": {
+          "id": "cUxIk9YqWdCKB3jN",
+          "name": "MongoDB account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Input": {
+      "main": [
+        [
+          {
+            "node": "AI Requirement Intelligence",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "AI QA Intelligence",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "AI Development Intelligence",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "AI Security Intelligence Engine",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Performance Intelligence Agent",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "AI Business Impact Intelligence",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "AI Observability Intelligence",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "AI Reliability Intelligence",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "AI Compliance Intelligence",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Requirement Intelligence": {
+      "main": [
+        [
+          {
+            "node": "Requirement Formatter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Development Intelligence": {
+      "main": [
+        [
+          {
+            "node": "Development Formatter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI QA Intelligence": {
+      "main": [
+        [
+          {
+            "node": "QA Formatter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Normalize Agent Outputs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Release Intelligence Engine": {
+      "main": [
+        [
+          {
+            "node": "Release Formatter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Development Formatter": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "QA Formatter": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Requirement Formatter": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "AI Security Intelligence Engine": {
+      "main": [
+        [
+          {
+            "node": "Security Intelligence Formatter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Security Intelligence Formatter": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Performance Intelligence Agent": {
+      "main": [
+        [
+          {
+            "node": "Performace Formatter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Performace Formatter": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 4
+          }
+        ]
+      ]
+    },
+    "Risk Aggregator": {
+      "main": [
+        [
+          {
+            "node": "Generate Release ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Business Impact Intelligence": {
+      "main": [
+        [
+          {
+            "node": "Business Impact Formatter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Business Impact Formatter": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 5
+          }
+        ]
+      ]
+    },
+    "AI Observability Intelligence": {
+      "main": [
+        [
+          {
+            "node": "Observability Intelligence Formatter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Observability Intelligence Formatter": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 6
+          }
+        ]
+      ]
+    },
+    "AI Reliability Intelligence": {
+      "main": [
+        [
+          {
+            "node": "Reliability Intelligence Formatter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reliability Intelligence Formatter": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 7
+          }
+        ]
+      ]
+    },
+    "AI Compliance Intelligence": {
+      "main": [
+        [
+          {
+            "node": "Compliance Intelligence Formatter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compliance Intelligence Formatter": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 8
+          }
+        ]
+      ]
+    },
+    "Normalize Agent Outputs": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "Release Intelligence Engine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Release Formatter": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Risk Aggregator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Release ID": {
+      "main": [
+        [
+          {
+            "node": "Insert documents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert documents": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "5655e6d9-2913-42f4-9229-218b03b01003",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0be5121106b8169345c4aac5834078a57298f091fee8c2fc99e2f6d229715cb4"
+  },
+  "id": "YOnhTXnB6KrGqSzI",
+  "tags": []
+}

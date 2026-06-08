@@ -1,0 +1,126 @@
+{
+  "name": "AI Insights API",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "ai-insights",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "442f8f7f-3d44-4d7f-a81d-3173a171992e",
+      "name": "Webhook",
+      "webhookId": "53f4222a-cb38-4057-ad01-cd7763e461fa",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "bk108bqD9L0ByTnd",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "collection": "release_history",
+        "options": {
+          "sort": "{\n  \"timestamp\": -1\n}"
+        }
+      },
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1.3,
+      "position": [
+        208,
+        0
+      ],
+      "id": "75972678-4fdf-4ff1-8721-78089411e4c1",
+      "name": "Find documents",
+      "credentials": {
+        "mongoDb": {
+          "id": "cUxIk9YqWdCKB3jN",
+          "name": "MongoDB account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const releases = $input.all().map(item => item.json);\n\nconst total = releases.length;\n\nif (total === 0) {\n  return {\n    total: 0,\n    averageConfidence: 0,\n    noGoCount: 0,\n    goWithRiskCount: 0,\n    goCount: 0,\n    highestRiskArea: \"UNKNOWN\",\n    mostCommonBlocker: \"None\"\n  };\n}\n\nconst avg = key =>\n  Math.round(\n    releases.reduce((sum, r) => sum + Number(r[key] || 0), 0) / total\n  );\n\nconst countByRecommendation = value =>\n  releases.filter(r => r.releaseRecommendation === value).length;\n\nconst allBlockers = releases.flatMap(r => r.criticalBlockers || []);\n\nconst blockerCount = {};\nfor (const blocker of allBlockers) {\n  blockerCount[blocker] = (blockerCount[blocker] || 0) + 1;\n}\n\nconst mostCommonBlocker =\n  Object.entries(blockerCount).sort((a, b) => b[1] - a[1])[0]?.[0] || \"None\";\n\nconst riskAreas = {\n  security: avg(\"securityScore\"),\n  performance: avg(\"performanceScore\"),\n  business: avg(\"businessScore\"),\n  observability: avg(\"observabilityScore\"),\n  reliability: avg(\"reliabilityScore\"),\n  compliance: avg(\"complianceScore\")\n};\n\nconst highestRiskArea =\n  Object.entries(riskAreas).sort((a, b) => a[1] - b[1])[0]?.[0] || \"UNKNOWN\";\n\nreturn {\n  total,\n  averageConfidence: avg(\"releaseConfidenceScore\"),\n  averageSecurityScore: avg(\"securityScore\"),\n  averagePerformanceScore: avg(\"performanceScore\"),\n  averageBusinessScore: avg(\"businessScore\"),\n  averageObservabilityScore: avg(\"observabilityScore\"),\n  averageReliabilityScore: avg(\"reliabilityScore\"),\n  averageComplianceScore: avg(\"complianceScore\"),\n\n  noGoCount: countByRecommendation(\"NO_GO\"),\n  goWithRiskCount: countByRecommendation(\"GO_WITH_RISK\"),\n  goCount: countByRecommendation(\"GO\"),\n\n  highestRiskArea,\n  mostCommonBlocker\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "5596b2f8-79ae-4622-822e-52d7672d9fea",
+      "name": "Calculate Insights"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        624,
+        0
+      ],
+      "id": "c45d7d58-c4e8-40c2-acb1-f56424088e0c",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Find documents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find documents": {
+      "main": [
+        [
+          {
+            "node": "Calculate Insights",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Insights": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "b28d31e0-ccf6-43fd-97b3-9fafc6fe9b68",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0be5121106b8169345c4aac5834078a57298f091fee8c2fc99e2f6d229715cb4"
+  },
+  "id": "EyVyfokpqvCXm3YK",
+  "tags": []
+}
